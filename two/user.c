@@ -144,7 +144,6 @@ static struct member* allocMember(const char* name, const int sex)
 */
 
 
-
 static inline bool  condCouple(struct member *male, struct member *female)
 {
 	return ((male->sex != female->sex) && (male->couple) && (female->couple));
@@ -234,6 +233,32 @@ static int choose(int *distance,size_t nMember, bool *visited)
 	return minpos;
 }
 
+static void updateDistance(struct member *mem, int *distance)
+{
+	int coupleIndex = -1;
+	int momIndex = -1;
+	int dadIndex = -1;
+
+	if(mem->couple)
+		coupleIndex = findMemberMapIndex(mem->couple->name);
+	if(mem->parents[MOM])
+		momIndex = findMemberMapIndex(mem->parents[MOM]->name);
+	if(mem->parents[DAD])
+		dadIndex = findMemberMapIndex(mem->parents[DAD]->name);
+	
+	for(int i = 0; i < map->nMember ; i++){
+		if(i == coupleIndex){
+			distance[i] = 0;
+		}
+		else if(i == momIndex || i == dadIndex){
+			distance[i] = 1;
+		}
+		else {
+			distance[i] = INT_MAX;
+		}
+	}
+}
+
 void init(char initialMemberName[], int initialMemberSex)
 {	
 	map = (struct map*)malloc(sizeof(*map));
@@ -295,7 +320,9 @@ int getDistance(char nameA[], char nameB[])
 	int alt = 0;
 	bool *visited = (bool*)malloc(sizeof(bool)*map->nMember);
 	int *dist = (int*)malloc(sizeof(int)*map->nMember);
-
+	int *queue = (int*)malloc(sizeof(*queue)*map->nMember);
+	int head =0 , tail = 0;
+	int u;
 	for(size_t i = 0; i < map->nMember; i++){
 		visited[i] = false;
 		dist[i] = INT_MAX;
@@ -303,22 +330,18 @@ int getDistance(char nameA[], char nameB[])
 
 	dist[src] = 0;
 	visited[src] = true;
+	queue[head] = src;
+	tail++;
 
-	while(IsQEmpty()){
-		current = Q.pop;
-		u = choose();
-
-		for(int = 0 ;i < nMem + ncouple; i++){
-			alt = dist[u] + length(u,v);
-			if(alt < dist[v]){
-				dist[v] = alt;
-				prev[v] = u;
-			}
-		}
+	while(head == tail){
+		current = map->member[queue[head]];
+		head++;
+		updateDistance(current,dist);
+		u = choose(dist,map->nMember,visited);
 	}
 
 
-	return -1;
+	return u;
 }
 
 int countMember(char name[], int dist)
