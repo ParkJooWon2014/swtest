@@ -30,6 +30,7 @@ extern int  countMember(char name[], int dist);
 ////////////////////////////////////////////////////////////////////////////////
 
 static int score = 0;
+static int count = 0;
 
 static void cmd_init()
 {
@@ -58,7 +59,10 @@ static void cmd_addMember()
 	
 	if (ansbool != userAns)
 	{
+		//printf(" userAns : %d ans : %d\n",userAns,ans);
 		score = 0;
+	}else {
+		//printf("SUCCESS\n");
 	}
 }
 
@@ -76,6 +80,8 @@ static void cmd_getDistance()
 	
 	if (ans != userAns)
 	{
+		count ++;
+		//printf("[%d]:userAns : %d ans : %d\n",count,userAns,ans);
 		score = 0;
 	}
 }
@@ -94,6 +100,8 @@ static void cmd_countMember()
 	
 	if (ans != userAns)
 	{
+		count ++;
+		//printf("[%d]:userAns : %d ans : %d\n",count,userAns,ans);
 		score = 0;
 	}
 }

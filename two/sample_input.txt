@@ -9,7 +9,7 @@
 1 tony 0 0 alice 0
 1 mak 0 1 smith 0
 1 rainy 1 1 smith 0
-1 dandy 0 0 julia 1
+1 dandy 0 0 julia 0
 2 sam chris 1
 2 sam dandy 1
 2 smith alice 1

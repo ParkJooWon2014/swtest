@@ -26,14 +26,14 @@
 #define CHILD   2
 
 #define NAME_LEN_MAX 19
-#define DEFAULT_CHILD 64
-#define DEFAULT_MAP 1024
-
+#define DEFUALT_CHILD 64
+#define DEFUALT_MAP 550
+#define INT_MAX 500
 /////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////
 
 struct member{
-	
+
 	char name[NAME_LEN_MAX];
 	int sex;
 	int nChild;
@@ -42,6 +42,8 @@ struct member{
 	struct member *couple;
 	struct member *parents[2];
 	struct member **child;
+
+	bool visited;
 };
 
 struct map{
@@ -79,13 +81,12 @@ static void addMemberMap(struct member* member)
 {
 	if(map->size == map->nMember){
 		map->member = (struct member **)realloc(map->member,map->size*2);
-		for(size_t i = 0; i < map->size; i++)
-			map->member[i+map->size] = NULL;
+		memset(map->member+map->size,0,sizeof(struct member*)*map->size);
 		map->size *= 2;
 	}
 
 	map->member[map->nMember] = member;
-	map->nMember += 1;
+	map->nMember ++;
 }
 
 static struct member *findMemberMap(char *name)
@@ -93,7 +94,7 @@ static struct member *findMemberMap(char *name)
 	struct member *target = NULL;
 
 	for(size_t i = 0; i < map->nMember; i++){
-		if(!mstrcmp(name,map->member[i]->name)){
+		if(!mstrcmp(map->member[i]->name,name)){
 			target = map->member[i];
 			break;
 		}
@@ -101,23 +102,37 @@ static struct member *findMemberMap(char *name)
 	return target;
 }
 
+static int findMemberMapIndex(char *name)
+{
+	int index = -1 ;
+	for(int i = 0; i < map->nMember; i++){
+		if(!mstrcmp(map->member[i]->name,name)){
+			index = i;
+			break;
+		}
+	}
+	return index;
+}
+
+
 static struct member* allocMember(const char* name, const int sex)
 {
 	struct member *member = (struct member*)malloc(sizeof(*member));
 	if(!member){
-		exit(1);
+		return NULL;
 	}
+
 	mstrcpy(member->name,name);
 	member->sex = sex;
 	member->parents[DAD] = NULL;
 	member->parents[MOM] = NULL;
 
 	member->child = (struct member**)malloc(
-			sizeof(*member->child)*DEFAULT_CHILD);
+			sizeof(*member->child)*DEFUALT_CHILD);
 	member->nChild = 0;
-	member->sizeChild = DEFAULT_CHILD;
-
-	for(int i = 0; i < DEFAULT_CHILD; i++){
+	member->sizeChild = DEFUALT_CHILD;
+	member->visited = false;
+	for(int i = 0; i < DEFUALT_CHILD; i++){
 		member->child[i] = NULL;
 	}
 	addMemberMap(member);
@@ -157,10 +172,10 @@ static void __insertChild(struct member*parent, struct member* child)
 
 	parent->child[parent->nChild] = child;
 	parent->nChild ++;
-	/* 의심 */
-	if(child->parents[parent->sex]){
-		printf("Something wrong %d %s %s\n",__LINE__,parent->name, child->name);
-	}
+
+//	if(child->parents[parent->sex]){
+//		("Something wrong %d %s %s\n",__LINE__,parent->name, child->name);
+//	}
 	child->parents[parent->sex] = parent;
 }
 
@@ -170,35 +185,7 @@ static void insertChild(struct member *par, struct member *ent)
 	struct member *male = (par->sex) ? par:ent;
 	struct member *female = (!par->sex) ? par : ent;
 	size_t nChild = male->nChild + female->nChild;
-	/*
-	if(nChild > male->sizeChild){
-		male->child = (struct member **)realloc(male->child,male->sizeChild*2);
-		for(size_t i = 0; i < male->sizeChild; i++)
-			male->child[i+male->sizeChild] = NULL;
-		male->sizeChild *= 2;
-	}
-
-	if(nChild > female->sizeChild){
-		female->child = (struct member **)realloc(female->child,female->sizeChild*2);
-		for(size_t i = 0; i < female->sizeChild; i++)
-			female->child[i+ female->sizeChild] = NULL;
-		female->sizeChild *= 2;
-	}
-
-	for(size_t i = 0; i < female->nChild; i++ ){
-		struct member *child = female->child[i];
-		child->parents[DAD] = male;
-		male->child[i+male->nChild];
-		male->nChild ++;
-	}
-
-	for(size_t i = 0; i < male->nChild; i++ ){
-		struct member *child = female->child[i];
-		child->parents[MOM] = female;
-		female->child[i+female->nChild];
-		female->nChild ++;
-	}
-*/
+	
 	for(size_t i = 0 ; i < male->nChild; i++){
 		__insertChild(female,male->child[i]);
 	}
@@ -234,24 +221,38 @@ static void connectChild(struct member * parent, struct member *child)
 	__insertChild(parent,child);
 }
 
-void init(char initialMemberName[], int initialMemberSex)
+static int choose(int *distance,size_t nMember, bool *visited)
 {
-	initialMember = allocMember(initialMemberName,initialMemberSex);
-	
+	int min = INT_MAX;
+	int minpos = -1;
+	for(size_t i = 0; i < nMember; i++){
+		if(distance[i] < min && !visited[i]){
+			min = distance[i];
+			minpos = i;
+		}
+	}
+	return minpos;
+}
+
+void init(char initialMemberName[], int initialMemberSex)
+{	
 	map = (struct map*)malloc(sizeof(*map));
 	if(!map){
-		exit(1);
+		return;
 	}
-	map->member = (struct member**)malloc(sizeof(*map->member)*DEFAULT_MAP);
+	map->member = (struct member**)malloc(sizeof(struct member*)*DEFUALT_MAP);
 	if(!map->member){
-		exit(1);
+		return;
 	}
-	for(int i = 0; i < DEFAULT_MAP; i++){
+	for(int i = 0; i < DEFUALT_MAP; i++){
 		map->member[i] = NULL;
 	}
-	map->size = DEFAULT_MAP;
+	map->size = DEFUALT_MAP;
 	map->nMember = 0;
+
+	initialMember = allocMember(initialMemberName,initialMemberSex);
 }
+
 
 bool addMember(char newMemberName[], int newMemberSex, int relationship, char existingMemberName[])
 {
@@ -259,14 +260,12 @@ bool addMember(char newMemberName[], int newMemberSex, int relationship, char ex
 	struct member *newMember = allocMember(newMemberName,newMemberSex);
 	struct member *existingMember = findMemberMap(existingMemberName);
 	switch(relationship){
-
 		case COUPLE:
 			ret = condCouple(newMember,existingMember);
 			if(ret){
 				connectCouple(newMember,existingMember);
 			}
 			break;
-
 		case PARENT:
 			ret = condParent(newMember,existingMember);
 			if(ret){
@@ -281,7 +280,7 @@ bool addMember(char newMemberName[], int newMemberSex, int relationship, char ex
 			}
 			break;
 		defualt:
-			printf("FUCK\n");
+			;
 	}
 
 	return ret;
@@ -289,6 +288,36 @@ bool addMember(char newMemberName[], int newMemberSex, int relationship, char ex
 
 int getDistance(char nameA[], char nameB[])
 {
+	int src = findMemberMapIndex(nameA);
+	struct member *dst;
+	struct member *tmp = NULL;
+	struct member *current = NULL;
+	int alt = 0;
+	bool *visited = (bool*)malloc(sizeof(bool)*map->nMember);
+	int *dist = (int*)malloc(sizeof(int)*map->nMember);
+
+	for(size_t i = 0; i < map->nMember; i++){
+		visited[i] = false;
+		dist[i] = INT_MAX;
+	}
+
+	dist[src] = 0;
+	visited[src] = true;
+
+	while(IsQEmpty()){
+		current = Q.pop;
+		u = choose();
+
+		for(int = 0 ;i < nMem + ncouple; i++){
+			alt = dist[u] + length(u,v);
+			if(alt < dist[v]){
+				dist[v] = alt;
+				prev[v] = u;
+			}
+		}
+	}
+
+
 	return -1;
 }
 
